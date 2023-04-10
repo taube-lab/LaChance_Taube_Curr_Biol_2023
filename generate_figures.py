@@ -484,8 +484,10 @@ def plot_pop_vector(rates,title,destination):
     ax.set_xticklabels(['0','90','180','270','360'])
     ax.set_yticks([0,len(rates)-1])
     ax.set_yticklabels(['1',str(len(rates))])
-    ax.set_xlabel('Head direction (deg)')
+    ax.set_xlabel('Center bearing (deg)')
     ax.set_ylabel('Cell number')
+    
+    plt.tight_layout()
     
     fig.savefig(destination)
     
@@ -498,20 +500,7 @@ def plot_pop_vector_dist(rates,title,destination,celltype='cd'):
     if not os.path.isdir(savedir):
         os.makedirs(savedir)
         
-        
     xvals=np.linspace(0,81,d_bins + 1,endpoint=True)
-    
-    if celltype == 'wd':
-        if '.6m s' in destination or 'rect s' in destination or 'l_shape s' in destination:
-            xvals = xvals[:8]
-        else:
-            xvals = xvals[:15]
-            
-    elif celltype == 'cd':
-        if 'rect s' in destination:
-            xvals = xvals[:17]
-        elif '.6m s' in destination:
-            xvals = xvals[:11]
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -519,7 +508,9 @@ def plot_pop_vector_dist(rates,title,destination,celltype='cd'):
     ax.set_title(title)
     ax.set_yticks([0,len(rates)-1])
     ax.set_yticklabels(['1',str(len(rates))])
-    ax.set_xlabel('Distance (bins)')
+    ax.set_xticks([0,5,10,15,20])
+    ax.set_xticklabels([0,20,40,60,80])
+    ax.set_xlabel('Distance (cm)')
     ax.set_ylabel('Cell number')
     
     plt.tight_layout()
@@ -587,7 +578,7 @@ def make_all_figures():
     ax.pie(x=nums,labels=labels,colors=colors,autopct='%1.00f%%')
     ax.set_title('All POR Cells (N = %i)' % len(data))
     plt.tight_layout()
-    fig.savefig(figdir + '/fig1/panel_C.png',dpi=400)
+    fig.savefig(figdir + '/fig1/panel_C.svg')
     plt.show()
     
     
@@ -730,33 +721,54 @@ def make_all_figures():
                     ax.set_ylim([1.2*(low_val+temp_offset),.3+temp_offset])   
                 
                 ax.set_xticks([0,1,2])
+                if shape == 'l_shape':
+                    ax.set_xticklabels(['Square 1','L-shape','Square 2'])
+                elif shape == 'rect':
+                    ax.set_xticklabels(['Square 1','Rectangle','Square 2'])
+                
                 ax.spines['left'].set_visible(True)
                 ax.spines['bottom'].set_visible(True)
                 ax.spines['top'].set_visible(False)
                 ax.spines['right'].set_visible(False)
-                
+                                
                 
                 if celltype == 'cb' and shape == 'l_shape':
                     if measure == 'center_vs_wall_rayleigh':
+                        ax.set_ylabel('MVL center - MVL wall')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig2/panel_A.png',dpi=400)
                     elif measure == 'center_vs_wall_ind':
+                        ax.set_ylabel('Likelihood index')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig2/panel_B.png',dpi=400)
                 elif celltype == 'cb' and shape == 'rect':
                     if measure == 'center_vs_wall_rayleigh':
+                        ax.set_ylabel('MVL center - MVL wall')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig4/panel_A.png',dpi=400)
                     elif measure == 'center_vs_wall_ind':
+                        ax.set_ylabel('Likelihood index')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig4/panel_B.png',dpi=400)
                         
                         
                 elif celltype == 'cdl' and shape == 'l_shape':
                     if measure == 'dist_fit_diff':
+                        ax.set_ylabel('R2 center - R2 wall')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig3/panel_A.png',dpi=400)
                     elif measure == 'center_vs_wall_ind':
+                        ax.set_ylabel('Likelihood index')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig3/panel_B.png',dpi=400)
                 elif celltype == 'cdl' and shape == 'rect':
                     if measure == 'dist_fit_diff':
+                        ax.set_ylabel('R2 center - R2 wall')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig4/panel_F.png',dpi=400)
                     elif measure == 'center_vs_wall_ind':
+                        ax.set_ylabel('Likelihood index')
+                        plt.tight_layout()
                         fig.savefig(figdir + '/fig4/panel_G.png',dpi=400)
 
                 plt.close()
@@ -835,13 +847,25 @@ def make_all_figures():
                 ax.set_ylim([low_y * 1.2, llps_target])
             
             if celltype == 'cb' and shape == 'l_shape':
+                ax.set_ylabel('MVL center - MVL wall')
+                ax.set_xlabel('Likelihood index')
+                plt.tight_layout()
                 fig.savefig(figdir + '/fig2/panel_C.png',dpi=400)
             elif celltype == 'cb' and shape == 'rect':
+                ax.set_ylabel('MVL center - MVL wall')
+                ax.set_xlabel('Likelihood index')
+                plt.tight_layout()
                 fig.savefig(figdir + '/fig4/panel_C.png',dpi=400)
                 
             if celltype == 'cdl' and shape == 'l_shape':
+                ax.set_ylabel('R2 center - R2 wall')
+                ax.set_xlabel('Likelihood index')
+                plt.tight_layout()
                 fig.savefig(figdir + '/fig3/panel_C.png',dpi=400)
             elif celltype == 'cdl' and shape == 'rect':
+                ax.set_ylabel('R2 center - R2 wall')
+                ax.set_xlabel('Likelihood index')
+                plt.tight_layout()
                 fig.savefig(figdir + '/fig4/panel_H.png',dpi=400)
                 
             plt.close()
@@ -1454,10 +1478,14 @@ def make_all_figures():
     ax.plot([-.5,.5],[-.5+intercept,.5+intercept],'k',alpha=.8)
     ax.plot([-.5,.5],[-1+intercept,1+intercept],'cornflowerblue',alpha=.8)
 
-    ax.set_xticks([-.5,-.4,-.3,-.2,-.1,0,.1,.2,.3,.4,.5])
-    ax.set_yticks([-.5,-.4,-.3,-.2,-.1,0,.1,.2,.3,.4,.5])
+    ax.set_xticks([-.3,0,.3])
+    ax.set_yticks([-.3,0,.3])
     ax.set_xlim([-.5,.5])
     ax.set_ylim([-.5,.5])
+    
+    ax.set_title('Center distance slopes')
+    ax.set_xlabel('Large1 slope (Hz/cm)')
+    ax.set_ylabel('Small slope (Hz/cm)')
 
     plt.tight_layout()
     
@@ -1499,10 +1527,14 @@ def make_all_figures():
     ax.plot([-.6,.6],[-.6+intercept,.6+intercept],'k',alpha=.8)
     ax.plot([-.6,.6],[-1.2+intercept,1.2+intercept],'cornflowerblue',alpha=.8)
 
-    ax.set_xticks([-.6,-.5,-.4,-.3,-.2,-.1,0,.1,.2,.3,.4,.5,.6])
-    ax.set_yticks([-.6,-.5,-.4,-.3,-.2,-.1,0,.1,.2,.3,.4,.5,.6])
+    ax.set_xticks([-.6,-.3,0,.3,.6])
+    ax.set_yticks([-.6,-.3,0,.3,.6])
     ax.set_xlim([-.6,.6])
     ax.set_ylim([-.6,.6])
+    
+    ax.set_title('Wall distance slopes')
+    ax.set_xlabel('Large1 slope (Hz/cm)')
+    ax.set_ylabel('Small slope (Hz/cm)')
 
     plt.tight_layout()
     fig.savefig(figdir + '/wall_slopes.png', dpi=400)
@@ -1685,7 +1717,7 @@ def make_all_figures():
             ax.plot(np.sort(std1),fit_y,color='green',linestyle='--',linewidth=2.5,alpha=.7)
         ax.set_ylim([min_val,max_val])
         ax.set_xlim([min_val,max_val])
-        ax.set_xlabel('Std1 slope (spikes/s/cm)')
+        ax.set_xlabel('Std1 slope (Hz/cm)')
         ax.set_ylabel('%s slope' % i)
         ax.spines['left'].set_visible(True)
         ax.spines['bottom'].set_visible(True)

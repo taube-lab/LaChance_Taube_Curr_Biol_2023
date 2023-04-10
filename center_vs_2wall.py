@@ -2,21 +2,21 @@
 """
 
 runs the GLM either using:
-    1. center bearing, center distance, head direction, linear speed
-    2. 2-wall bearing, 2-wall distance, head direction, linear speed
+    1. center bearing, center distance, head direction, linear speed ('centroid' model)
+    2. 2-wall bearing, 2-wall distance, head direction, linear speed ('two-wall' model)
     3. head direction, linear speed ('no ego' model)
-    4. uniform mean firing rate
+    4. uniform mean firing rate ('uniform' model)
     
-saves results as a pickle file. parameter vectors need to be exponentiated
-to turn them into 'response profiles'
+calculates likelihood index for center vs. wall and saves modeled firing rate vectors to a pickle file
 
-one example cell included, recorded in l-shaped environment
+includes four example cells from Figure 1, recorded in l-shaped environment
 
 NOTE: collect_data function 'calc_wall_ego_lshape' is built specifically to account
 for some warping from our camera, so edits will need to be made if used on l-shape data
-not from this study
+not from this particular study
 
 @author: Patrick
+
 """
 import os
 import numpy as np
@@ -42,8 +42,7 @@ def objective(params,X,spike_train):
     
     f = np.sum(rate - spike_train * u)
     grad = X.T * (rate - spike_train)
-    
-    print(f)
+
     return f,grad
 
 
@@ -65,7 +64,6 @@ def wall_objective(params,Xw1,Xw2,Xd1,Xd2,Xa,Xs,spike_train):
     
     f = np.sum(rate - spike_train*np.log(rate))
 
-    print(f)
     return f
 
 
@@ -113,7 +111,7 @@ def make_wall_X_two(trial_data):
     closest_dists = np.take_along_axis(all_dists,np.argsort(all_dists),axis=-1)
     closest_bearings = np.take_along_axis(all_bearings,np.argsort(all_dists),axis=-1)
     
-    closest_dists = closest_dists / np.nanmax(closest_dists[:,1])
+    closest_dists = closest_dists / np.nanmax(closest_dists)
     
     distance_bins = np.digitize(closest_dists,np.linspace(0,1,dist_bins,endpoint=False)) - 1
     bearing_bins = np.digitize(closest_bearings,np.linspace(0,360,hd_bins,endpoint=False)) - 1
@@ -210,7 +208,6 @@ def run_final(model,scale_factor,center_ego_params,center_dist_params,allo_param
 
     llps = f/np.sum(spike_train)
     
-    
     print('-----------------------')
     print(model)
     print(' ')
@@ -228,14 +225,9 @@ def run_final(model,scale_factor,center_ego_params,center_dist_params,allo_param
     else:
         cdict['llps'] = f
         
-    cdict['lambda'] = rate
     cdict['test_spikes'] = spike_train
     cdict['tot_spikes'] = np.sum(spike_train)
     cdict['scale_factor'] = scale_factor
-    cdict['center_params'] = center_ego_params
-    cdict['dist_params'] = center_dist_params
-    cdict['allo_params'] = allo_params
-    cdict['speed_params'] = speed_params
     cdict['rate'] = rate
 
     return cdict
@@ -292,11 +284,6 @@ def run_wall_final(model,scale_factor,params,Xw1,Xw2,Xd1,Xd2,Xa,Xs,spike_train):
     cdict['test_spikes'] = spike_train
     cdict['tot_spikes'] = np.sum(spike_train)
     cdict['scale_factor'] = scale_factor
-
-    cdict['wall_params'] = wall_params
-    cdict['dist_params'] = dist_params
-    cdict['allo_params'] = allo_params
-    cdict['speed_params'] = speed_params
     cdict['rate'] = rate
 
     return cdict
@@ -322,84 +309,92 @@ if __name__ == '__main__':
     variables = [('allo'),('center_ego'),('center_dist'),('speed')]
     all_models = get_all_models(variables)
     
-    tracking_fdir = os.getcwd() + '/example_cell l_shape s2'
-    cell = 'TT1_SS_10.txt'
-
-    timestamps,center_x,center_y,angles = collect_data.read_video_file(tracking_fdir + '/tracking_data.txt')
-    trial_data = {'timestamps':timestamps,'center_x':center_x,'center_y':center_y,'angles':angles}
-    spike_timestamps = np.arange(timestamps[0],timestamps[len(timestamps)-1],1000.)
-
-    trial_data['spike_timestamps'] = spike_timestamps
+    example_cells = os.getcwd() + '/example_cells'
     
-    if 'rect' in tracking_fdir:
-        gr1 = 20
-        gr2 = 10
-    elif '1.2m' in tracking_fdir:
-        gr1 = 20
-        gr2 = 20
-    elif '.6m' in tracking_fdir:
-        gr1 = 10
-        gr2 = 10
-    
-    save_dir = tracking_fdir + '/wall_vs_center'
+    save_dir = example_cells + '/wall_vs_center_results'
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
+    
+    for cell in os.listdir(example_cells):
         
-    center_x=np.array(trial_data['center_x'])
-    center_y=np.array(trial_data['center_y'])
-    angles=np.array(trial_data['angles'])
-    
-    if 'l_shape s' in tracking_fdir:
-        trial_data = collect_data.calc_center_ego_lshape(trial_data)
-        trial_data = collect_data.calc_wall_ego_lshape(trial_data)
-    else:
-        trial_data = collect_data.ego_stuff(trial_data)
+        celldir = example_cells + '/' + cell
         
-    trial_data = collect_data.speed_stuff(trial_data)
+        if not os.path.isdir(celldir) or cell == 'wall_vs_center_results':
+            continue
+
+        timestamps,center_x,center_y,angles = collect_data.read_video_file(celldir + '/tracking_data.txt')
+        trial_data = {'timestamps':timestamps,'center_x':center_x,'center_y':center_y,'angles':angles}
+        spike_timestamps = np.arange(timestamps[0],timestamps[len(timestamps)-1],1000.)
+    
+        trial_data['spike_timestamps'] = spike_timestamps
         
-    #make design matrices
-    X,Xe,Xd,Xa,Xs,Xnoego = make_X(trial_data,[])
-    Xw1,Xw2,Xd1,Xd2 = make_wall_X_two(trial_data)
+        if 'rect' in celldir:
+            gr1 = 20
+            gr2 = 10
+        elif '1.2m' in celldir:
+            gr1 = 20
+            gr2 = 20
+        elif '.6m' in celldir:
+            gr1 = 10
+            gr2 = 10
 
-    fname = tracking_fdir+ '/' + cell
-    cluster_data={}
-    cluster_data['spike_list'] = collect_data.ts_file_reader(fname)
-    spike_data,cluster_data = collect_data.create_spike_lists(trial_data,cluster_data)
-    spike_train = spike_data['ani_spikes']
+        center_x=np.array(trial_data['center_x'])
+        center_y=np.array(trial_data['center_y'])
+        angles=np.array(trial_data['angles'])
+        
+        if 'l_shape s' in celldir:
+            trial_data = collect_data.calc_center_ego_lshape(trial_data)
+            trial_data = collect_data.calc_wall_ego_lshape(trial_data)
+        else:
+            trial_data = collect_data.ego_stuff(trial_data)
+            
+        trial_data = collect_data.speed_stuff(trial_data)
+            
+        #make design matrices
+        X,Xe,Xd,Xa,Xs,Xnoego = make_X(trial_data,[])
+        Xw1,Xw2,Xd1,Xd2 = make_wall_X_two(trial_data)
     
-    savefile = save_dir+'/%s_cdict.pickle' % cell
-
-    params = np.zeros(hd_bins*2 + dist_bins*2)
-    result = minimize(wall_objective,params,args=(Xw1,Xw2,Xd1,Xd2,Xa,Xs,spike_train),method='L-BFGS-B')
-    wall_base_cdict = run_wall_final([],1.,result.x,Xw1,Xw2,Xd1,Xd2,Xa,Xs,spike_train)
+        fname = celldir + '/' + 'spike_timestamps.txt'
+        cluster_data={}
+        cluster_data['spike_list'] = collect_data.ts_file_reader(fname)
+        spike_data,cluster_data = collect_data.create_spike_lists(trial_data,cluster_data)
+        spike_train = spike_data['ani_spikes']
+        
+        savefile = save_dir+'/%s_cdict.pickle' % cell
     
-    params = np.zeros(np.shape(X)[1])
-    result = minimize(objective,params,args=(X,spike_train),jac=True,method='L-BFGS-B')
-    params = result.x
-    center_ego_params = params[:hd_bins]
-    center_dist_params = params[hd_bins:(hd_bins+dist_bins)]
-    allo_params = params[(hd_bins+dist_bins):(2*hd_bins+dist_bins)]
-    speed_params = params[(2*hd_bins+dist_bins):]
-    center_base_cdict = run_final(frozenset(variables),1.,center_ego_params,center_dist_params,allo_params,speed_params,Xe,Xd,Xa,Xs,spike_train)
-
-    params = np.zeros(np.shape(Xnoego)[1])
-    result = minimize(objective,params,args=(Xnoego,spike_train),jac=True,method='L-BFGS-B')
-    params = result.x
-    allo_params = params[:hd_bins]
-    speed_params = params[hd_bins:]
-    noego_base_cdict = run_final(frozenset([('allo'),('speed')]),1.,[],[],allo_params,speed_params,[],[],Xa,Xs,spike_train)
+        params = np.zeros(hd_bins*2 + dist_bins*2)
+        result = minimize(wall_objective,params,args=(Xw1,Xw2,Xd1,Xd2,Xa,Xs,spike_train),method='L-BFGS-B')
+        wall_base_cdict = run_wall_final(frozenset(('wall_ego','wall_dist','allo','speed')),1.,result.x,Xw1,Xw2,Xd1,Xd2,Xa,Xs,spike_train)
+        
+        params = np.zeros(np.shape(X)[1])
+        result = minimize(objective,params,args=(X,spike_train),jac=True,method='L-BFGS-B')
+        params = result.x
+        center_ego_params = params[:hd_bins]
+        center_dist_params = params[hd_bins:(hd_bins+dist_bins)]
+        allo_params = params[(hd_bins+dist_bins):(2*hd_bins+dist_bins)]
+        speed_params = params[(2*hd_bins+dist_bins):]
+        center_base_cdict = run_final(frozenset(variables),1.,center_ego_params,center_dist_params,allo_params,speed_params,Xe,Xd,Xa,Xs,spike_train)
     
-
-    uniform_base_cdict = run_final('uniform',1.,center_ego_params,center_dist_params,allo_params,speed_params,Xe,Xd,Xa,Xs,spike_train)
-
-    base_nspikes = np.sum(spike_train)
-
-    cdict = {}
-    cdict['wall_base'] = wall_base_cdict
-    cdict['center_base'] = center_base_cdict
-    cdict['uniform_base'] = uniform_base_cdict
-    cdict['noego_base'] = noego_base_cdict
-    cdict['base_nspikes'] = base_nspikes
+        params = np.zeros(np.shape(Xnoego)[1])
+        result = minimize(objective,params,args=(Xnoego,spike_train),jac=True,method='L-BFGS-B')
+        params = result.x
+        allo_params = params[:hd_bins]
+        speed_params = params[hd_bins:]
+        noego_base_cdict = run_final(frozenset([('allo'),('speed')]),1.,[],[],allo_params,speed_params,[],[],Xa,Xs,spike_train)
+        
+        uniform_base_cdict = run_final('uniform',1.,center_ego_params,center_dist_params,allo_params,speed_params,Xe,Xd,Xa,Xs,spike_train)
     
-    with open(savefile,'wb') as f:
-        pickle.dump(cdict,f,protocol=2)
+        cdict = {}
+        cdict['wall_base'] = wall_base_cdict
+        cdict['center_base'] = center_base_cdict
+        cdict['uniform_base'] = uniform_base_cdict
+        cdict['noego_base'] = noego_base_cdict
+        
+        cdict['LI'] = ((center_base_cdict['llps'] - uniform_base_cdict['llps']) - (wall_base_cdict['llps'] - uniform_base_cdict['llps'])) / ((center_base_cdict['llps'] - uniform_base_cdict['llps']) + (wall_base_cdict['llps'] - uniform_base_cdict['llps']))
+        
+        print(cell)
+        print('Likelihood index: %f' % cdict['LI'])
+        print('')
+        
+        with open(savefile,'wb') as f:
+            pickle.dump(cdict,f,protocol=2)
