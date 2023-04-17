@@ -540,6 +540,10 @@ def make_all_figures():
     baseline_datafile = os.getcwd() + '/figures/baseline_data.pickle'
     figdir = os.getcwd() + '/figures'
     
+    for i in range(1,8):
+        if not os.path.exists(figdir+'/fig%i' % i):
+            os.mkdir(figdir+'/fig%i' % i)
+    
     with open(baseline_datafile,'rb') as f:
         data = pickle.load(f)
 
@@ -1341,7 +1345,7 @@ def make_all_figures():
         elif session == 'exp':
             session_type = 'rect'
         plot_hd_map(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],figdir+'/hd_path_spike_%s.png' % session)
-        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
+        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/heatmap_%s.png' % session)
 
     stacked_dist_curves(celldict,figdir)
     
@@ -1362,7 +1366,7 @@ def make_all_figures():
         elif session == 'exp':
             session_type = 'rect'
         plot_hd_map(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],figdir+'/hd_path_spike_%s.png' % session)
-        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
+        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/heatmap_%s.png' % session)
 
     stacked_dist_curves(celldict,figdir)
     
@@ -1407,7 +1411,7 @@ def make_all_figures():
         elif session == 'exp':
             session_type = '.6m'
         plot_hd_map(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],figdir+'/hd_path_spike_%s.png' % session)
-        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
+        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/heatmap_%s.png' % session)
 
     stacked_dist_curves(celldict,figdir)
     
@@ -1428,7 +1432,7 @@ def make_all_figures():
         elif session == 'exp':
             session_type = '.6m'
         plot_hd_map(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],figdir+'/hd_path_spike_%s.png' % session)
-        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
+        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/heatmap_%s.png' % session)
         hd_vector_plots(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
 
     stacked_dist_curves(celldict,figdir)
@@ -1596,7 +1600,7 @@ def make_all_figures():
     for session in ['std1','plexi','raised','raised_plexi','std2']:
         session_type = '1m'
         plot_hd_map(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],figdir+'/hd_path_spike_%s.png' % session)
-        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
+        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/heatmap_%s.png' % session)
     
     plexi_stacked_rates(celldict, 'cd', figdir)
 
@@ -1613,7 +1617,7 @@ def make_all_figures():
     for session in ['std1','plexi','raised','raised_plexi','std2']:
         session_type = '1m'
         plot_hd_map(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['angles'],celldict[session]['spike_train'],figdir+'/hd_path_spike_%s.png' % session)
-        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/hd_vectors_%s.png' % session)
+        plot_heatmap(celldict[session]['center_x'],celldict[session]['center_y'],celldict[session]['spike_train'],session_type,figdir+'/heatmap_%s.png' % session)
     
     plexi_stacked_rates(celldict, 'cd', figdir)
 
@@ -1781,7 +1785,7 @@ def stacked_ego_curves(celldict,destination):
             
         yticks = ax.get_yticks()
         for j in yticks:
-            print(np.float(j))
+            # print(np.float(j))
             if np.float(j) == np.float(7.5):
                 ax.set_yticks([0,4,8])
 
@@ -1832,8 +1836,8 @@ def stacked_dist_curves(celldict,destination):
         
         yticks = ax.get_yticks()
         for j in yticks:
-            print(np.float(j))
-            print(np.float(j) == np.float(7.5))
+            # print(np.float(j))
+            # print(np.float(j) == np.float(7.5))
             if np.float(j) == np.float(7.5):
                 ax.set_yticks([0,4,8])
                 
